@@ -35,7 +35,11 @@ func NewMemStorage() *MemStorage {
 }
 
 func handleMetrics(w http.ResponseWriter, r *http.Request, s *MemStorage) {
-	println("Handle Metrics")
+	// println(r.URL.Path)
+	if r.Method != http.MethodPost {
+		http.Error(w, "Only POST method allowed", http.StatusBadRequest)
+		return
+	}
 
 	urlParts := strings.Split(strings.TrimPrefix(r.URL.Path, "/update/"), "/")
 
@@ -54,31 +58,36 @@ func handleMetrics(w http.ResponseWriter, r *http.Request, s *MemStorage) {
 		return
 	}
 
-	if metricValueStr == "" {
-		http.Error(w, "Invalid metric value", http.StatusNotFound)
-		return
-	}
+	// if metricValueStr == "" {
+	// 	http.Error(w, "Invalid metric value", http.StatusBadRequest)
+	// 	return
+	// }
 
 	var metricValue interface{}
 	var err error
 
 	switch metricType {
 	case "gauge":
+		// if metricValueStr == "" {
+		// 	http.Error(w, "Invalid metric value", http.StatusNotFound)
+		// 	return
+		// }
+
 		metricValue, err = strconv.ParseFloat(metricValueStr, 64)
-		println("gauge")
-		println(metricValue)
+
 		if err != nil {
 			err = fmt.Errorf("Invalid gauge metric value: %s", metricValueStr)
 		}
 
 		s.metrics[metricName] = metricValue.(float64)
 	case "counter":
+
 		metricValue, err = strconv.ParseInt(metricValueStr, 10, 0)
-		println("counter")
-		println(metricValue)
+
 		if err != nil {
 			err = fmt.Errorf("Invalid counter metric value: %s", metricValueStr)
 		}
+
 		prevValue, exists := s.metrics[metricName]
 		if exists {
 			currentValue, ok := prevValue.(int64)
@@ -90,6 +99,7 @@ func handleMetrics(w http.ResponseWriter, r *http.Request, s *MemStorage) {
 		} else {
 			s.metrics[metricName] = metricValue.(int64)
 		}
+
 	default:
 		err = fmt.Errorf("Invalid metric type: %s", metricType)
 	}
